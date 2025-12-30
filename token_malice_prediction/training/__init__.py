@@ -2,8 +2,18 @@
 Training Module
 
 Contains training utilities:
-- Trainer class for GNN model training
+- TemporalTrainer class for temporal GNN models with enhanced logging
 - Metric computation utilities
 """
 
-from .trainer import Trainer, compute_metrics
+from .temporal_trainer import (
+    TemporalTrainer,
+    compute_metrics,
+    print_model_summary
+)
+
+__all__ = [
+    'TemporalTrainer',
+    'compute_metrics',
+    'print_model_summary'
+]

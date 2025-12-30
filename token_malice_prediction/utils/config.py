@@ -7,7 +7,7 @@ Handles configuration loading, validation, and management.
 import yaml
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 from pathlib import Path
 import logging
 
@@ -37,6 +37,15 @@ class ModelConfig:
     num_classes: int = 2
     pooling: str = 'concat'  # 'mean', 'max', 'add', 'concat'
     use_edge_features: bool = True
+    
+    # Temporal model settings
+    model_type: str = 'temporal'  # 'gat' for old model, 'temporal' for new
+    num_snapshots: int = 5  # Number of temporal snapshots
+    num_gine_layers: int = 3  # Number of GINEConv layers per snapshot
+    num_temporal_layers: int = 2  # Number of LSTM/EvolveGCN layers
+    use_evolve_gcn: bool = True  # Use EvolveGCN-O vs LSTM for temporal
+    overlap_ratio: float = 0.2  # Overlap between temporal windows
+    attention_heads: int = 4  # Heads for GlobalAttention readout
 
 
 @dataclass

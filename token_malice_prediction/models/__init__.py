@@ -2,8 +2,13 @@
 Model Architectures Module
 
 Contains implementations of:
-- GAT-based GNN models using GATv2Conv
+- Temporal GNN models with GINEConv + EvolveGCN-O + Global Attention
 - Graph classification architectures
 """
 
-from .gnn import TokenGATClassifier, TokenGATClassifierSimple, create_model
+from .temporal_gnn import HeteroGINEEvolveGCN, create_temporal_model
+
+__all__ = [
+    'HeteroGINEEvolveGCN',
+    'create_temporal_model'
+]

@@ -5,7 +5,7 @@ Implements evaluation metrics for token malice prediction.
 """
 
 import numpy as np
-from typing import Dict, Optional, List
+from typing import Dict, Optional
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     roc_auc_score, average_precision_score, confusion_matrix
