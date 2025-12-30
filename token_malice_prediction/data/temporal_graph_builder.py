@@ -131,15 +131,19 @@ class TemporalGraphBuilder:
             Feature vector
         """
         # Numeric features (log-scaled)
-        amount = np.log1p(float(row['Amount']))
-        value = np.log1p(float(row['Value']))
-        amount_x_value = np.log1p(float(row.get('amount_x_value', row['Amount'] * row['Value'])))
+        # Use decimal-adjusted token_amount if available, otherwise use raw Amount
+        token_amount = float(row.get('token_amount', row['Amount']))
+        amount = np.log1p(token_amount)
+        value = np.log1p(float(row['Value']))  # Value is now token price after preprocessing fix
+        # transaction_value is the USD value of transaction (token_amount * price)
+        transaction_value = float(row.get('transaction_value', token_amount * row['Value']))
+        amount_x_value = np.log1p(transaction_value)
         
         # Time features
         timestamp = float(row['timestamp'])
         window_duration = max(window_end - window_start, 1)
         rel_time_window = (timestamp - window_start) / window_duration
-        rel_time_global = float(row.get('rel_time_6w', 0.5))
+        rel_time_global = float(row.get('rel_time_normalized', row.get('rel_time_6w', 0.5)))
         
         # Cyclical time encoding
         time_sin = np.sin(2 * np.pi * rel_time_global)
@@ -279,8 +283,9 @@ class TemporalGraphBuilder:
         for _, row in df.iterrows():
             from_idx = self.node_to_idx[row['From']]
             to_idx = self.node_to_idx[row['To']]
-            amount = float(row['Amount'])
-            value = float(row['Value'])
+            # Use decimal-adjusted token_amount if available
+            amount = float(row.get('token_amount', row['Amount']))
+            value = float(row.get('transaction_value', row['Value']))  # Use transaction USD value for aggregation
             
             is_active[from_idx] = 1
             is_active[to_idx] = 1
@@ -301,14 +306,18 @@ class TemporalGraphBuilder:
         total_degree = in_degree + out_degree
         snapshot_position = np.full(num_nodes, snapshot_idx / max(self.num_snapshots - 1, 1))
         
+        # Safely compute log features (clip to avoid -inf from log1p of negative values)
+        def safe_log1p(x):
+            return np.log1p(np.maximum(x, 0))
+        
         node_features = np.column_stack([
             in_degree,
             out_degree,
             total_degree,
-            np.log1p(total_amount_sent),
-            np.log1p(total_amount_received),
-            np.log1p(total_value_sent),
-            np.log1p(total_value_received),
+            safe_log1p(total_amount_sent),
+            safe_log1p(total_amount_received),
+            safe_log1p(total_value_sent),
+            safe_log1p(total_value_received),
             is_active,
             snapshot_position
         ])

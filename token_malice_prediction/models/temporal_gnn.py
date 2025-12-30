@@ -521,13 +521,14 @@ class HeteroGINEEvolveGCN(nn.Module):
         # Add temporal embedding dimension
         classifier_input_dim += hidden_dim
         
+        # Use LayerNorm instead of BatchNorm to support batch size 1
         self.classifier = nn.Sequential(
             nn.Linear(classifier_input_dim, hidden_dim),
-            nn.BatchNorm1d(hidden_dim),
+            nn.LayerNorm(hidden_dim),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.BatchNorm1d(hidden_dim // 2),
+            nn.LayerNorm(hidden_dim // 2),
             nn.ReLU(),
             nn.Dropout(dropout),
             nn.Linear(hidden_dim // 2, num_classes)
@@ -610,6 +611,17 @@ class HeteroGINEEvolveGCN(nn.Module):
         
         # Final graph embedding: combine last snapshot + temporal
         final_snapshot_emb = snapshot_embeddings[:, -1, :]  # (1, hidden_dim)
+        
+        # Normalize dimensions - ensure both are exactly 2D: (1, hidden_dim)
+        while temporal_emb.dim() > 2:
+            temporal_emb = temporal_emb.squeeze(0)
+        while temporal_emb.dim() < 2:
+            temporal_emb = temporal_emb.unsqueeze(0)
+            
+        while final_snapshot_emb.dim() > 2:
+            final_snapshot_emb = final_snapshot_emb.squeeze(0)
+        while final_snapshot_emb.dim() < 2:
+            final_snapshot_emb = final_snapshot_emb.unsqueeze(0)
         
         if self.pooling == 'concat':
             # Already concatenated in _pool_snapshot

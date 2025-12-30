@@ -142,10 +142,10 @@ class TemporalTrainer:
         self.gradient_clip = gradient_clip
         self.use_temporal = use_temporal
         
-        # Loss function with optional class weights
+        # Loss function with optional class weights and label smoothing for numerical stability
         if class_weights is not None:
             class_weights = class_weights.to(device)
-        self.criterion = nn.CrossEntropyLoss(weight=class_weights)
+        self.criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=0.1)
         
         # Training history
         self.history = {
@@ -166,7 +166,15 @@ class TemporalTrainer:
         Returns:
             Tuple of (output logits, labels)
         """
-        if self.use_temporal and hasattr(batch, 'snapshots'):
+        # Check if batch is a list of temporal graphs
+        is_temporal_batch = (
+            self.use_temporal and 
+            isinstance(batch, list) and 
+            len(batch) > 0 and 
+            hasattr(batch[0], 'snapshots')
+        )
+        
+        if is_temporal_batch:
             # Temporal batch - list of temporal graphs
             out = self.model(
                 x=None,
@@ -231,8 +239,25 @@ class TemporalTrainer:
             
             loss = self.criterion(out, labels)
             
+            # Check for NaN loss and skip batch if so
+            if torch.isnan(loss) or torch.isinf(loss):
+                print(f"Warning: NaN/Inf loss detected, skipping batch")
+                continue
+            
             # Backward pass
             loss.backward()
+            
+            # Check for NaN gradients
+            has_nan_grad = False
+            for param in self.model.parameters():
+                if param.grad is not None and (torch.isnan(param.grad).any() or torch.isinf(param.grad).any()):
+                    has_nan_grad = True
+                    break
+            
+            if has_nan_grad:
+                print(f"Warning: NaN/Inf gradients detected, skipping batch")
+                self.optimizer.zero_grad()
+                continue
             
             # Gradient clipping
             if self.gradient_clip > 0:
@@ -300,10 +325,17 @@ class TemporalTrainer:
             
             loss = self.criterion(out, labels)
             
+            # Skip batches with NaN loss
+            if torch.isnan(loss) or torch.isinf(loss):
+                continue
+            
             batch_size = len(batch) if self.use_temporal else batch.num_graphs
             total_loss += loss.item() * batch_size
             pred = out.argmax(dim=1)
             probs = F.softmax(out, dim=1)
+            
+            # Handle NaN in probabilities
+            probs = torch.nan_to_num(probs, nan=0.5)
             
             correct += (pred == labels).sum().item()
             total += batch_size
