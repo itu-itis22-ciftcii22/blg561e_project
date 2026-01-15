@@ -1,0 +1,1 @@
+pip install --no-cache-dir -r requirements.txt --find-links https://data.pyg.org/whl/torch-2.8.0+cpu.html

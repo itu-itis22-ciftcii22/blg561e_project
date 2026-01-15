@@ -1,7 +1,4 @@
-/design.pdf
-/solana1
-/solana2
-/data_solana
+/scraper/*.jsonl
+/scraped_data
+/graph_cache.pt
 **/__pycache__/
-/project_source.zip
-/blg561ep-taslak1.pptx

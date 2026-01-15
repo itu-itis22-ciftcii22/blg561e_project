@@ -1,33 +1,45 @@
-# Configuration for Token Malice Prediction
+# Configuration for Token Malice Prediction - Ablation Study
 
-data:
-  data_dir: "solana1"  # Directory containing token CSV files
-  batch_size: 32
-  num_workers: 0
-  train_ratio: 0.7
-  val_ratio: 0.15
-  test_ratio: 0.15
-  malice_threshold: 0.9  # 90% value decline = malicious
-  min_transactions: 10
+# Base configuration (shared across all runs)
+base:
+  data:
+    data_dir: "data/bq_data_100plus"
+    num_snapshots: 6
+    cache_path: "data/graph_cache.pt"
+  
+  training:
+    test_ratio: 0.2
+    val_ratio: 0.1
+    batch_size: 16
+    learning_rate: 0.01
+    weight_decay: 0.01
+    num_epochs: 1
+    gradient_clip: 1.0
+  
+  output_dir: "./outputs"
+  seed: 42
+  device: "cuda"
 
-model:
-  hidden_dim: 128
-  num_layers: 3
-  num_heads: 4
-  dropout: 0.3
-  num_classes: 2
-  pooling: "concat"  # mean, max, add, concat
-  use_edge_features: true
+# Experiment runs (each overrides model config from base)
+runs:
+  # Hidden dimension ablation
+  - name: "hidden_32"
+    model:
+      hidden_dim: 32
+      num_heads: 2
+      dropout: 0.2
+      pooling: "concat"
 
-training:
-  learning_rate: 0.001
-  weight_decay: 0.01
-  num_epochs: 100
-  gradient_clip: 1.0
-  early_stopping_patience: 10
-  use_class_weights: true
+  - name: "hidden_64"
+    model:
+      hidden_dim: 64
+      num_heads: 2
+      dropout: 0.2
+      pooling: "concat"
 
-output_dir: "./outputs"
-experiment_name: "token_malice_prediction"
-seed: 42
-device: "cuda"
+  - name: "hidden_128"
+    model:
+      hidden_dim: 128
+      num_heads: 2
+      dropout: 0.2
+      pooling: "concat"
